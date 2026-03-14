@@ -327,6 +327,16 @@ class Database:
         )
         await self.db.commit()
 
+    async def mark_category_read(self, category_id: int) -> None:
+        await self.db.execute(
+            """UPDATE articles SET is_read = 1
+               WHERE is_read = 0 AND feed_id IN (
+                   SELECT feed_id FROM feed_categories WHERE category_id = ?
+               )""",
+            (category_id,),
+        )
+        await self.db.commit()
+
     async def toggle_star(self, article_id: int) -> bool:
         async with self.db.execute(
             "SELECT is_starred FROM articles WHERE id = ?", (article_id,)

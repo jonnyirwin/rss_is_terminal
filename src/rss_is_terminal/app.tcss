@@ -170,7 +170,7 @@ HelpScreen {
     border: thick $accent;
     background: $surface;
     padding: 1 2;
-    overflow-y: auto;
+    scrollbar-size: 1 1;
 }
 
 #help-title {

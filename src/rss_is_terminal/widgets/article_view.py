@@ -22,7 +22,22 @@ class ArticleScroller(VerticalScroll, can_focus=True):
         Binding("k", "scroll_up", "Scroll Up", show=False),
         Binding("g", "scroll_home", "Top", show=False),
         Binding("G", "scroll_end", "Bottom", show=False),
+        Binding("n", "next_link", "Next Link", show=False),
+        Binding("N", "prev_link", "Prev Link", show=False),
+        Binding("enter", "open_selected_link", "Open Link", show=False),
     ]
+
+    def _get_panel(self) -> ArticleViewPanel:
+        return self.query_ancestor(ArticleViewPanel)
+
+    def action_next_link(self) -> None:
+        self._get_panel().action_next_link()
+
+    def action_prev_link(self) -> None:
+        self._get_panel().action_prev_link()
+
+    def action_open_selected_link(self) -> None:
+        self._get_panel().action_open_selected_link()
 
 
 class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
@@ -42,9 +57,6 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
     BINDINGS = [
         Binding("o", "open_browser", "Open Browser", show=False),
         Binding("f", "fetch_full", "Full Article", show=False),
-        Binding("n", "next_link", "Next Link", show=False),
-        Binding("N", "prev_link", "Prev Link", show=False),
-        Binding("enter", "open_selected_link", "Open Link", show=False),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -55,7 +67,7 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
         self._converter.body_width = 0
         self._converter.ignore_images = False
         self._converter.ignore_links = False
-        self._converter.protect_links = True
+        self._converter.protect_links = False
         self._converter.wrap_links = False
         self._links: list[tuple[str, str]] = []  # (text, url)
         self._selected_link: int = -1  # -1 = no selection
@@ -93,7 +105,7 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
     def _extract_links(self, md_text: str) -> list[tuple[str, str]]:
         """Extract all markdown links as (display_text, url) tuples."""
         links = []
-        for m in re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', md_text):
+        for m in re.finditer(r'\[([^\]]+)\]\(<?([^)>]+)>?\)', md_text):
             text, url = m.group(1), m.group(2)
             links.append((text, url))
         return links

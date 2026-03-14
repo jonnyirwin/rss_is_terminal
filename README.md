@@ -260,6 +260,14 @@ vim_mode = true
 # default_browser_cmd = "firefox"
 ```
 
+### Browser command
+
+By default, links are opened using `xdg-open`. On some systems (particularly Wayland sessions), `xdg-open` may not work correctly. If links fail to open, set `default_browser_cmd` to your browser directly:
+
+```toml
+default_browser_cmd = "firefox"
+```
+
 ## File locations
 
 | Path | Contents |

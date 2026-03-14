@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Static
 
@@ -27,6 +27,8 @@ HELP_TEXT = """\
   [cyan]j[/cyan] / [cyan]k[/cyan]              Move down / up
   [cyan]Enter[/cyan]              Select feed
   [cyan]o[/cyan]                  Collapse / expand category
+  [cyan]O[/cyan]                  Collapse all categories
+  [cyan]A[/cyan]                  Mark feed / category as read
   [cyan]d[/cyan]                  Delete feed / category
   [cyan]c[/cyan]                  Manage feed categories
   [cyan]C[/cyan]                  Create category
@@ -59,11 +61,19 @@ class HelpScreen(ModalScreen):
     BINDINGS = [
         Binding("escape", "dismiss", "Close"),
         Binding("question_mark", "dismiss", "Close"),
+        Binding("j", "scroll_down", "Down", show=False),
+        Binding("k", "scroll_up", "Up", show=False),
     ]
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="help-dialog"):
+        with VerticalScroll(id="help-dialog"):
             yield Static(HELP_TEXT)
+
+    def action_scroll_down(self) -> None:
+        self.query_one("#help-dialog").scroll_down()
+
+    def action_scroll_up(self) -> None:
+        self.query_one("#help-dialog").scroll_up()
 
     def on_key(self, event) -> None:
         if event.key in ("escape", "question_mark"):

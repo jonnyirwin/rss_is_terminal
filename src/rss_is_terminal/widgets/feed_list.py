@@ -32,6 +32,7 @@ class FeedTree(Tree):
         Binding("k", "cursor_up", "Up", show=False),
         Binding("enter", "select_cursor", "Select", show=False),
         Binding("o", "toggle_parent", "Toggle", show=False),
+        Binding("O", "collapse_all", "Collapse All", show=False),
     ]
 
     def action_toggle_parent(self) -> None:
@@ -45,6 +46,12 @@ class FeedTree(Tree):
             node.parent.toggle()
         else:
             node.toggle()
+
+    def action_collapse_all(self) -> None:
+        """Collapse all category nodes."""
+        for node in self.root.children:
+            if isinstance(node.data, CategoryData):
+                node.collapse()
 
 
 class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
@@ -92,11 +99,22 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
             self.category_id = category_id
             self.direction = direction  # -1 = up, +1 = down
 
+    class MarkFeedReadRequested(Message):
+        def __init__(self, feed_id: int) -> None:
+            super().__init__()
+            self.feed_id = feed_id
+
+    class MarkCategoryReadRequested(Message):
+        def __init__(self, category_id: int) -> None:
+            super().__init__()
+            self.category_id = category_id
+
     BINDINGS = [
         Binding("d", "delete_item", "Delete", show=False),
         Binding("c", "manage_categories", "Categories", show=False),
         Binding("J", "move_down", "Move Down", show=False),
         Binding("K", "move_up", "Move Up", show=False),
+        Binding("A", "mark_read", "Mark Read", show=False),
     ]
 
     def compose(self):
@@ -220,3 +238,11 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
         node = tree.cursor_node
         if node and isinstance(node.data, CategoryData):
             self.post_message(self.CategoryMoveRequested(node.data.id, -1))
+
+    def action_mark_read(self) -> None:
+        tree = self.tree
+        node = tree.cursor_node
+        if node and isinstance(node.data, FeedData):
+            self.post_message(self.MarkFeedReadRequested(node.data.id))
+        elif node and isinstance(node.data, CategoryData):
+            self.post_message(self.MarkCategoryReadRequested(node.data.id))

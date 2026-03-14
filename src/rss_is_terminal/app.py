@@ -611,6 +611,22 @@ class RSSApp(App):
         self.notify("Category deleted")
         await self._update_unread_title()
 
+    async def on_feed_list_panel_mark_feed_read_requested(
+        self, msg: FeedListPanel.MarkFeedReadRequested
+    ) -> None:
+        await self.db.mark_all_read(msg.feed_id)
+        await self._reload_feeds()
+        await self._update_unread_title()
+        self.notify("Feed marked as read")
+
+    async def on_feed_list_panel_mark_category_read_requested(
+        self, msg: FeedListPanel.MarkCategoryReadRequested
+    ) -> None:
+        await self.db.mark_category_read(msg.category_id)
+        await self._reload_feeds()
+        await self._update_unread_title()
+        self.notify("Category marked as read")
+
     async def on_feed_list_panel_category_move_requested(
         self, msg: FeedListPanel.CategoryMoveRequested
     ) -> None:
