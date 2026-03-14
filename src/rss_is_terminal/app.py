@@ -892,6 +892,15 @@ class RSSApp(App):
     async def _reload_feeds(self) -> None:
         feed_panel = self.query_one("#feeds-panel", FeedListPanel)
         await feed_panel.load_feeds(self.db)
+        # Also reload the currently visible article list
+        articles_panel = self.query_one("#articles-panel", ArticleListPanel)
+        await articles_panel.load_articles(
+            self.db,
+            self._current_feed_id,
+            category_id=self._current_category_id,
+            unread_only=self._filter_mode == "unread",
+            starred_only=self._filter_mode == "starred",
+        )
 
     async def _update_unread_title(self) -> None:
         unread = await self.db.get_total_unread_count()
