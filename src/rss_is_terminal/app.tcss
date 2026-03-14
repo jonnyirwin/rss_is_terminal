@@ -1,0 +1,181 @@
+Screen {
+    background: $surface;
+}
+
+#main {
+    height: 1fr;
+}
+
+/* Left panel: feed list */
+#feeds-panel {
+    width: 32;
+    border: solid $accent;
+    border-title-color: $text;
+    border-title-style: bold;
+    background: $surface;
+}
+
+#feeds-panel:focus-within {
+    border: double $accent-lighten-2;
+    border-title-color: $accent-lighten-2;
+}
+
+#feed-tree {
+    width: 1fr;
+    height: 1fr;
+    scrollbar-size: 1 1;
+}
+
+/* Right column */
+#right-column {
+    width: 1fr;
+}
+
+/* Top-right: article list */
+#articles-panel {
+    height: 2fr;
+    border: solid $accent;
+    border-title-color: $text;
+    border-title-style: bold;
+    background: $surface;
+}
+
+#articles-panel:focus-within {
+    border: double $accent-lighten-2;
+    border-title-color: $accent-lighten-2;
+}
+
+#article-table {
+    width: 1fr;
+    height: 1fr;
+    scrollbar-size: 1 1;
+}
+
+/* Bottom-right: article preview */
+#preview-panel {
+    height: 3fr;
+    border: solid $accent;
+    border-title-color: $text;
+    border-title-style: bold;
+    background: $surface;
+}
+
+#preview-panel:focus-within {
+    border: double $accent-lighten-2;
+    border-title-color: $accent-lighten-2;
+}
+
+#article-scroller {
+    width: 1fr;
+    height: 1fr;
+    scrollbar-size: 1 1;
+}
+
+#article-content {
+    width: 1fr;
+    padding: 0 1;
+}
+
+/* Search bar */
+#search-bar {
+    dock: top;
+    height: 3;
+    display: none;
+    padding: 0 1;
+    background: $surface;
+    border-bottom: solid $accent;
+}
+
+#search-bar.visible {
+    display: block;
+}
+
+#search-input {
+    width: 1fr;
+}
+
+/* Filter indicator */
+.filter-label {
+    color: $accent-lighten-1;
+    text-style: italic;
+}
+
+/* Status bar */
+#status-bar {
+    dock: bottom;
+    height: 1;
+    background: $accent;
+    color: $text;
+    padding: 0 1;
+}
+
+/* Welcome message */
+#welcome {
+    width: 1fr;
+    height: 1fr;
+    content-align: center middle;
+    color: $text-muted;
+    padding: 2 4;
+}
+
+/* Modal screens */
+AddFeedScreen, ConfirmScreen, CategoryScreen, OPMLScreen,
+SearchScreen, AddScraperScreen, ManageCategoriesScreen,
+DeleteCategoryScreen {
+    align: center middle;
+}
+
+.modal-dialog {
+    width: 60;
+    height: auto;
+    max-height: 28;
+    border: thick $accent;
+    background: $surface;
+    padding: 1 2;
+}
+
+.modal-dialog Label {
+    margin-bottom: 1;
+}
+
+.modal-dialog Input {
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+.modal-dialog SelectionList {
+    width: 1fr;
+    height: auto;
+    max-height: 10;
+    margin-bottom: 1;
+}
+
+.modal-buttons {
+    height: 3;
+    align-horizontal: right;
+}
+
+.modal-buttons Button {
+    margin-left: 1;
+}
+
+/* Help screen */
+HelpScreen {
+    align: center middle;
+}
+
+#help-dialog {
+    width: 70;
+    height: 30;
+    border: thick $accent;
+    background: $surface;
+    padding: 1 2;
+    overflow-y: auto;
+}
+
+#help-title {
+    text-align: center;
+    text-style: bold;
+    color: $accent-lighten-2;
+    margin-bottom: 1;
+}
