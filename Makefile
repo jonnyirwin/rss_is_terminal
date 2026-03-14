@@ -1,8 +1,6 @@
 .PHONY: all build install install-user install-pipx install-js extension native-host native-host-chrome dev test lint run clean help
 
 PYTHON ?= python3
-PIP ?= pip3
-
 all: build extension ## Build everything
 
 help: ## Show this help
@@ -12,21 +10,24 @@ help: ## Show this help
 # ---- Python app ----
 
 build: ## Build Python wheel
-	$(PIP) install build
-	$(PYTHON) -m build
+	$(PYTHON) -m venv /tmp/rss-is-terminal-build
+	/tmp/rss-is-terminal-build/bin/pip install build
+	/tmp/rss-is-terminal-build/bin/python -m build
+	rm -rf /tmp/rss-is-terminal-build
 
 install: build ## Install system-wide (may need sudo)
-	$(PIP) install dist/rss_is_terminal-*.whl
+	sudo $(PYTHON) -m pip install dist/rss_is_terminal-*.whl
 
 install-user: build ## Install for current user
-	$(PIP) install --user dist/rss_is_terminal-*.whl
+	pipx install dist/rss_is_terminal-*.whl || $(PYTHON) -m pip install --user dist/rss_is_terminal-*.whl
 
 install-pipx: build ## Install isolated with pipx
 	pipx install dist/rss_is_terminal-*.whl
 
 install-js: build ## Install with Playwright (JS rendering) support
-	$(PIP) install --user "dist/rss_is_terminal-*.whl[js]"
-	$(PYTHON) -m playwright install chromium
+	pipx install "dist/rss_is_terminal-*.whl[js]"
+	pipx runpip rss-is-terminal install playwright
+	$(PYTHON) -m playwright install chromium || pipx run --spec rss-is-terminal playwright install chromium
 
 # ---- Browser extension ----
 
@@ -48,17 +49,14 @@ dev: ## Set up development environment
 	@echo ""
 	@echo "Activate with: source .venv/bin/activate"
 
-test: ## Run tests
-	$(PIP) install -e ".[dev]"
-	$(PYTHON) -m pytest
+test: ## Run tests (requires make dev first)
+	.venv/bin/pytest
 
-lint: ## Run linter
-	$(PIP) install -e ".[dev]"
-	$(PYTHON) -m ruff check src/
+lint: ## Run linter (requires make dev first)
+	.venv/bin/ruff check src/
 
-run: ## Run the app
-	$(PIP) install -e .
-	$(PYTHON) -m rss_is_terminal.app
+run: ## Run the app (requires make dev first)
+	.venv/bin/python -m rss_is_terminal.app
 
 # ---- Cleanup ----
 
