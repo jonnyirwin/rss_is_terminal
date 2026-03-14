@@ -31,8 +31,20 @@ class FeedTree(Tree):
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
         Binding("enter", "select_cursor", "Select", show=False),
-        Binding("o", "toggle_node", "Toggle", show=False),
+        Binding("o", "toggle_parent", "Toggle", show=False),
     ]
+
+    def action_toggle_parent(self) -> None:
+        """Toggle the current node if it's a category, or its parent category if it's a feed."""
+        node = self.cursor_node
+        if node is None:
+            return
+        if isinstance(node.data, CategoryData):
+            node.toggle()
+        elif isinstance(node.data, FeedData) and node.parent and isinstance(node.parent.data, CategoryData):
+            node.parent.toggle()
+        else:
+            node.toggle()
 
 
 class FeedListPanel(Widget, can_focus=False, can_focus_children=True):

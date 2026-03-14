@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import webbrowser
 from datetime import datetime
 
@@ -41,6 +42,9 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
     BINDINGS = [
         Binding("o", "open_browser", "Open Browser", show=False),
         Binding("f", "fetch_full", "Full Article", show=False),
+        Binding("n", "next_link", "Next Link", show=False),
+        Binding("N", "prev_link", "Prev Link", show=False),
+        Binding("enter", "open_selected_link", "Open Link", show=False),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -53,6 +57,9 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
         self._converter.ignore_links = False
         self._converter.protect_links = True
         self._converter.wrap_links = False
+        self._links: list[tuple[str, str]] = []  # (text, url)
+        self._selected_link: int = -1  # -1 = no selection
+        self._md_text: str = ""
 
     def compose(self):
         with ArticleScroller(id="article-scroller"):
@@ -74,12 +81,63 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
         html_content = article["content"] or article["summary"] or ""
 
         # Build markdown content
-        md_text = self._build_markdown(article, html_content)
-        await self.content_widget.update(md_text)
+        self._md_text = self._build_markdown(article, html_content)
+        self._links = self._extract_links(self._md_text)
+        self._selected_link = -1
+        await self.content_widget.update(self._md_text)
 
         # Mark as read
         if not article["is_read"]:
             await db.mark_read(article_id, True)
+
+    def _extract_links(self, md_text: str) -> list[tuple[str, str]]:
+        """Extract all markdown links as (display_text, url) tuples."""
+        links = []
+        for m in re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', md_text):
+            text, url = m.group(1), m.group(2)
+            links.append((text, url))
+        return links
+
+    def _highlight_link(self, md_text: str, link_index: int) -> str:
+        """Re-render markdown with the selected link highlighted."""
+        links = list(re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', md_text))
+        if link_index < 0 or link_index >= len(links):
+            return md_text
+
+        match = links[link_index]
+        text, url = match.group(1), match.group(2)
+        start, end = match.start(), match.end()
+        highlighted = f"**>>> [{text}]({url}) <<<**"
+        return md_text[:start] + highlighted + md_text[end:]
+
+    async def _update_link_highlight(self) -> None:
+        """Update the display with the current link highlighted."""
+        if self._selected_link >= 0:
+            highlighted = self._highlight_link(self._md_text, self._selected_link)
+        else:
+            highlighted = self._md_text
+        await self.content_widget.update(highlighted)
+
+        # Scroll the selected link into view
+        if self._selected_link >= 0:
+            await self._scroll_to_link()
+
+    async def _scroll_to_link(self) -> None:
+        """Scroll so the selected link is visible."""
+        md = self.content_widget
+        scroller = self.query_one("#article-scroller", ArticleScroller)
+        # Find the block containing the link
+        links_seen = 0
+        target_block = None
+        link_text = self._links[self._selected_link][0] if self._selected_link >= 0 else None
+        if link_text:
+            for block in md.children:
+                block_text = str(block.render()) if hasattr(block, 'render') else ""
+                if link_text in block_text or f">>> " in block_text:
+                    target_block = block
+                    break
+        if target_block:
+            scroller.scroll_to_widget(target_block, animate=False)
 
     def _build_markdown(self, article, html_content: str) -> str:
         parts = []
@@ -124,7 +182,6 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
         stripped = html.strip()
         if len(stripped) < 20:
             return False
-        # Detect content that's just a single <a> tag (e.g. HN "Comments" link)
         import re
         text_only = re.sub(r"<[^>]+>", "", stripped).strip()
         if len(text_only) < 20:
@@ -141,6 +198,9 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
         await self.content_widget.update("\n".join(parts))
 
     async def show_welcome(self) -> None:
+        self._links = []
+        self._selected_link = -1
+        self._md_text = ""
         await self.content_widget.update(
             "# Welcome to RSS is Terminal\n\n"
             "Get started:\n\n"
@@ -151,6 +211,9 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
         )
 
     async def clear(self) -> None:
+        self._links = []
+        self._selected_link = -1
+        self._md_text = ""
         await self.content_widget.update("")
 
     def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
@@ -166,3 +229,23 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
     def action_fetch_full(self) -> None:
         if self._current_article_id and self._current_url:
             self.post_message(self.FetchFullArticle(self._current_article_id, self._current_url))
+
+    def action_next_link(self) -> None:
+        if not self._links:
+            return
+        self._selected_link = (self._selected_link + 1) % len(self._links)
+        self.run_worker(self._update_link_highlight())
+
+    def action_prev_link(self) -> None:
+        if not self._links:
+            return
+        if self._selected_link <= 0:
+            self._selected_link = len(self._links) - 1
+        else:
+            self._selected_link -= 1
+        self.run_worker(self._update_link_highlight())
+
+    def action_open_selected_link(self) -> None:
+        if self._selected_link >= 0 and self._selected_link < len(self._links):
+            url = self._links[self._selected_link][1]
+            self.post_message(self.ArticleOpenBrowser(url))

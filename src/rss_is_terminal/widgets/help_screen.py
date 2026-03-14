@@ -26,7 +26,7 @@ HELP_TEXT = """\
 [bold]Feed List[/bold]
   [cyan]j[/cyan] / [cyan]k[/cyan]              Move down / up
   [cyan]Enter[/cyan]              Select feed
-  [cyan]o[/cyan]                  Expand / collapse
+  [cyan]o[/cyan]                  Collapse / expand category
   [cyan]d[/cyan]                  Delete feed / category
   [cyan]c[/cyan]                  Manage feed categories
   [cyan]C[/cyan]                  Create category
@@ -48,6 +48,8 @@ HELP_TEXT = """\
   [cyan]g[/cyan] / [cyan]G[/cyan]              Top / bottom
   [cyan]o[/cyan]                  Open in browser
   [cyan]f[/cyan]                  Fetch full article
+  [cyan]n[/cyan] / [cyan]N[/cyan]              Next / previous link
+  [cyan]Enter[/cyan]              Open selected link
 
 [dim]Press Escape or ? to close[/dim]
 """

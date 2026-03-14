@@ -1,4 +1,4 @@
-.PHONY: all build install install-user install-pipx install-js extension native-host native-host-chrome dev test lint run clean help
+.PHONY: all build install install-user install-pipx upgrade install-js extension native-host native-host-chrome dev test lint run clean help
 
 PYTHON ?= python3
 all: build extension ## Build everything
@@ -23,6 +23,9 @@ install-user: build ## Install for current user
 
 install-pipx: build ## Install isolated with pipx
 	pipx install dist/rss_is_terminal-*.whl
+
+upgrade: build ## Upgrade existing pipx installation
+	pipx install --force dist/rss_is_terminal-*.whl
 
 install-js: build ## Install with Playwright (JS rendering) support
 	pipx install "dist/rss_is_terminal-*.whl[js]"

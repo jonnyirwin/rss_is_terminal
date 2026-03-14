@@ -49,6 +49,14 @@ make dev
 source .venv/bin/activate
 ```
 
+### Upgrading
+
+After pulling new changes:
+
+```bash
+make upgrade
+```
+
 ### With JavaScript rendering support
 
 For scraping JS-heavy sites that need a headless browser:
@@ -115,7 +123,7 @@ Press `E` to export all feeds and categories to an OPML file.
 |-----|--------|
 | `j` / `k` | Move down / up |
 | `Enter` | Select feed |
-| `o` | Expand / collapse category |
+| `o` | Collapse / expand category (works on feeds too) |
 | `d` | Delete feed or category |
 | `c` | Manage feed categories |
 | `J` / `K` | Move category up / down |
@@ -139,6 +147,8 @@ Press `E` to export all feeds and categories to an OPML file.
 | `g` / `G` | Jump to top / bottom |
 | `o` | Open in browser |
 | `f` | Fetch full article content |
+| `n` / `N` | Next / previous link |
+| `Enter` | Open selected link in browser |
 
 ## Custom scraper feeds
 
