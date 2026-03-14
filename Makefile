@@ -1,8 +1,7 @@
-.PHONY: all build install install-user extension native-host clean dev test lint help
+.PHONY: all build install install-user install-pipx install-js extension native-host native-host-chrome dev test lint run clean help
 
 PYTHON ?= python3
 PIP ?= pip3
-VENV ?= .venv
 
 all: build extension ## Build everything
 
@@ -13,6 +12,7 @@ help: ## Show this help
 # ---- Python app ----
 
 build: ## Build Python wheel
+	$(PIP) install build
 	$(PYTHON) -m build
 
 install: build ## Install system-wide (may need sudo)
@@ -43,19 +43,22 @@ native-host-chrome: ## Install native host with Chrome extension ID
 # ---- Development ----
 
 dev: ## Set up development environment
-	$(PYTHON) -m venv $(VENV)
-	$(VENV)/bin/pip install -e ".[dev,js]"
+	$(PYTHON) -m venv .venv
+	.venv/bin/pip install -e ".[dev,js]"
 	@echo ""
-	@echo "Activate with: source $(VENV)/bin/activate"
+	@echo "Activate with: source .venv/bin/activate"
 
 test: ## Run tests
-	$(VENV)/bin/pytest
+	$(PIP) install -e ".[dev]"
+	$(PYTHON) -m pytest
 
 lint: ## Run linter
-	$(VENV)/bin/ruff check src/
+	$(PIP) install -e ".[dev]"
+	$(PYTHON) -m ruff check src/
 
-run: ## Run the app (from source)
-	$(VENV)/bin/python -m rss_is_terminal.app
+run: ## Run the app
+	$(PIP) install -e .
+	$(PYTHON) -m rss_is_terminal.app
 
 # ---- Cleanup ----
 

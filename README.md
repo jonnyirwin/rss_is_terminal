@@ -263,10 +263,14 @@ These follow the [XDG Base Directory Specification](https://specifications.freed
 ## Development
 
 ```bash
+# Option A: use a venv (recommended for development)
 make dev
 source .venv/bin/activate
+
+# Option B: just run targets directly (installs deps as needed)
 make test
 make lint
+make run
 ```
 
 ## License
