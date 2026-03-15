@@ -619,6 +619,14 @@ class RSSApp(App):
         await self._update_unread_title()
         self.notify("Feed marked as read")
 
+    async def on_feed_list_panel_mark_all_feeds_read_requested(
+        self, msg: FeedListPanel.MarkAllFeedsReadRequested
+    ) -> None:
+        await self.db.mark_all_feeds_read()
+        await self._reload_feeds()
+        await self._update_unread_title()
+        self.notify("All feeds marked as read")
+
     async def on_feed_list_panel_mark_category_read_requested(
         self, msg: FeedListPanel.MarkCategoryReadRequested
     ) -> None:

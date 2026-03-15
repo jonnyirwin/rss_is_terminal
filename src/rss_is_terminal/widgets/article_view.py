@@ -110,46 +110,56 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
             links.append((text, url))
         return links
 
-    def _highlight_link(self, md_text: str, link_index: int) -> str:
-        """Re-render markdown with the selected link highlighted."""
+    def _highlight_link(self, md_text: str, link_index: int) -> tuple[str, int]:
+        """Re-render markdown with the selected link highlighted.
+
+        Returns (highlighted_md, line_number) where line_number is the
+        0-based line in the markdown source containing the highlighted link.
+        """
         links = list(re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', md_text))
         if link_index < 0 or link_index >= len(links):
-            return md_text
+            return md_text, -1
 
         match = links[link_index]
         text, url = match.group(1), match.group(2)
         start, end = match.start(), match.end()
         highlighted = f"**>>> [{text}]({url}) <<<**"
-        return md_text[:start] + highlighted + md_text[end:]
+        # Calculate the line number of the match in the original text
+        line_number = md_text[:start].count('\n')
+        return md_text[:start] + highlighted + md_text[end:], line_number
 
     async def _update_link_highlight(self) -> None:
         """Update the display with the current link highlighted."""
+        target_line = -1
         if self._selected_link >= 0:
-            highlighted = self._highlight_link(self._md_text, self._selected_link)
+            highlighted, target_line = self._highlight_link(
+                self._md_text, self._selected_link
+            )
         else:
             highlighted = self._md_text
         await self.content_widget.update(highlighted)
 
         # Scroll the selected link into view
-        if self._selected_link >= 0:
-            await self._scroll_to_link()
+        if self._selected_link >= 0 and target_line >= 0:
+            self._scroll_to_source_line(target_line)
 
-    async def _scroll_to_link(self) -> None:
-        """Scroll so the selected link is visible."""
+    def _scroll_to_source_line(self, target_line: int) -> None:
+        """Scroll so the block containing the given source line is visible."""
         md = self.content_widget
         scroller = self.query_one("#article-scroller", ArticleScroller)
-        # Find the block containing the link
-        links_seen = 0
-        target_block = None
-        link_text = self._links[self._selected_link][0] if self._selected_link >= 0 else None
-        if link_text:
-            for block in md.children:
-                block_text = str(block.render()) if hasattr(block, 'render') else ""
-                if link_text in block_text or f">>> " in block_text:
-                    target_block = block
-                    break
-        if target_block:
-            scroller.scroll_to_widget(target_block, animate=False)
+        for block in md.children:
+            sr = getattr(block, "source_range", None)
+            if sr and sr[0] <= target_line < sr[1]:
+                scroller.scroll_to_widget(block, animate=False)
+                return
+        # Fallback: if no source_range matched, try the last block before target
+        best = None
+        for block in md.children:
+            sr = getattr(block, "source_range", None)
+            if sr and sr[0] <= target_line:
+                best = block
+        if best is not None:
+            scroller.scroll_to_widget(best, animate=False)
 
     def _build_markdown(self, article, html_content: str) -> str:
         parts = []
@@ -183,6 +193,10 @@ class ArticleViewPanel(Widget, can_focus=False, can_focus_children=True):
             parts.append(md_content)
         else:
             parts.append("*No content available. Press **o** to open in browser.*")
+
+        parts.append("")
+        parts.append("---")
+        parts.append("*— End of article —*")
 
         return "\n".join(parts)
 

@@ -27,8 +27,8 @@ HELP_TEXT = """\
   [cyan]j[/cyan] / [cyan]k[/cyan]              Move down / up
   [cyan]Enter[/cyan]              Select feed
   [cyan]o[/cyan]                  Collapse / expand category
-  [cyan]O[/cyan]                  Collapse all categories
-  [cyan]A[/cyan]                  Mark feed / category as read
+  [cyan]O[/cyan]                  Toggle all categories
+  [cyan]A[/cyan]                  Mark feed / category / all as read
   [cyan]d[/cyan]                  Delete feed / category
   [cyan]c[/cyan]                  Manage feed categories
   [cyan]C[/cyan]                  Create category

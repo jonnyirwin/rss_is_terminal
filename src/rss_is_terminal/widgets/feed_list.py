@@ -48,10 +48,17 @@ class FeedTree(Tree):
             node.toggle()
 
     def action_collapse_all(self) -> None:
-        """Collapse all category nodes."""
-        for node in self.root.children:
-            if isinstance(node.data, CategoryData):
+        """Toggle all category nodes between collapsed and expanded."""
+        category_nodes = [n for n in self.root.children if isinstance(n.data, CategoryData)]
+        if not category_nodes:
+            return
+        # If any are expanded, collapse all; otherwise expand all
+        any_expanded = any(n.is_expanded for n in category_nodes)
+        for node in category_nodes:
+            if any_expanded:
                 node.collapse()
+            else:
+                node.expand()
 
 
 class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
@@ -109,6 +116,9 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
             super().__init__()
             self.category_id = category_id
 
+    class MarkAllFeedsReadRequested(Message):
+        pass
+
     BINDINGS = [
         Binding("d", "delete_item", "Delete", show=False),
         Binding("c", "manage_categories", "Categories", show=False),
@@ -116,6 +126,10 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
         Binding("K", "move_up", "Move Up", show=False),
         Binding("A", "mark_read", "Mark Read", show=False),
     ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._collapsed_categories: set[int] = set()
 
     def compose(self):
         tree = FeedTree("Feeds", id="feed-tree")
@@ -127,8 +141,20 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
     def tree(self) -> FeedTree:
         return self.query_one("#feed-tree", FeedTree)
 
+    def _save_collapsed_state(self) -> None:
+        """Persist which categories are collapsed."""
+        tree = self.tree
+        self._collapsed_categories = set()
+        for node in tree.root.children:
+            if isinstance(node.data, CategoryData) and not node.is_expanded:
+                self._collapsed_categories.add(node.data.id)
+
     async def load_feeds(self, db) -> None:
         tree = self.tree
+
+        # Save collapsed state before clearing
+        self._save_collapsed_state()
+
         tree.clear()
         tree.root.data = None
 
@@ -176,7 +202,8 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
                 ))
             if unread_total > 0:
                 cat_node.label = f"{cat['name']} ({unread_total})"
-            cat_node.expand()
+            if cat["id"] not in self._collapsed_categories:
+                cat_node.expand()
 
         # Uncategorized feeds (not in any category)
         uncategorized = [f for f in feeds if f["id"] not in categorized_ids]
@@ -246,3 +273,5 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
             self.post_message(self.MarkFeedReadRequested(node.data.id))
         elif node and isinstance(node.data, CategoryData):
             self.post_message(self.MarkCategoryReadRequested(node.data.id))
+        elif node and node.data == "all":
+            self.post_message(self.MarkAllFeedsReadRequested())
