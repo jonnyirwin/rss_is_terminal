@@ -158,8 +158,13 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
         tree.clear()
         tree.root.data = None
 
-        # Add "All Feeds" node
-        all_node = tree.root.add("All Feeds")
+        # Add "All Feeds" node with total unread count
+        total_unread = await db.get_total_unread_count()
+        if total_unread > 0:
+            all_label = f"[bold]All Feeds[/bold] [cyan]({total_unread})[/cyan]"
+        else:
+            all_label = "All Feeds"
+        all_node = tree.root.add(all_label)
         all_node.data = "all"
 
         # Add "Starred" node

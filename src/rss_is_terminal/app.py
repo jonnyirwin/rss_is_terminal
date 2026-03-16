@@ -776,18 +776,30 @@ class RSSApp(App):
 
     async def action_refresh_all(self) -> None:
         self.notify("Refreshing all feeds...")
+        self._set_refreshing(True)
         self.run_worker(self._do_refresh_all())
 
     async def _do_refresh_all(self) -> None:
-        errors = await self.feed_service.refresh_all()
-        await self._reload_feeds()
-        error_count = sum(1 for e in errors.values() if e)
-        total = len(errors)
-        if error_count:
-            self.notify(f"Refreshed {total - error_count}/{total} feeds ({error_count} errors)", severity="warning")
+        try:
+            errors = await self.feed_service.refresh_all()
+            await self._reload_feeds()
+            error_count = sum(1 for e in errors.values() if e)
+            total = len(errors)
+            if error_count:
+                self.notify(f"Refreshed {total - error_count}/{total} feeds ({error_count} errors)", severity="warning")
+            else:
+                self.notify(f"Refreshed {total} feeds")
+            await self._update_unread_title()
+        finally:
+            self._set_refreshing(False)
+
+    def _set_refreshing(self, refreshing: bool) -> None:
+        """Show/hide a loading indicator in the feed panel border title."""
+        feed_panel = self.query_one("#feeds-panel", FeedListPanel)
+        if refreshing:
+            feed_panel.border_title = "Feeds [cyan](refreshing...)[/cyan]"
         else:
-            self.notify(f"Refreshed {total} feeds")
-        await self._update_unread_title()
+            feed_panel.border_title = "Feeds"
 
     async def _auto_refresh(self) -> None:
         await self._do_refresh_all()

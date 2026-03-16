@@ -101,12 +101,8 @@ class FeedFetcher:
             )
 
     async def fetch_all(self, feed_urls: list[tuple[int, str]]) -> dict[int, FetchResult]:
-        """Fetch multiple feeds. Returns {feed_id: FetchResult}."""
-        tasks = {
-            feed_id: self.fetch_feed(url)
-            for feed_id, url in feed_urls
-        }
-        results = {}
-        for feed_id, coro in tasks.items():
-            results[feed_id] = await coro
-        return results
+        """Fetch multiple feeds concurrently. Returns {feed_id: FetchResult}."""
+        feed_ids = [feed_id for feed_id, _ in feed_urls]
+        coros = [self.fetch_feed(url) for _, url in feed_urls]
+        fetch_results = await asyncio.gather(*coros)
+        return dict(zip(feed_ids, fetch_results))
