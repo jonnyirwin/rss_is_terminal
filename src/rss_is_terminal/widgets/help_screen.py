@@ -44,6 +44,7 @@ HELP_TEXT = """\
   [cyan]u[/cyan]                  Filter: unread only
   [cyan]S[/cyan]                  Filter: starred only
   [cyan]a[/cyan]                  Filter: show all
+  [cyan]m[/cyan]                  Load more articles
 
 [bold]Article Preview[/bold]
   [cyan]j[/cyan] / [cyan]k[/cyan]              Scroll down / up

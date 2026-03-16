@@ -129,7 +129,7 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._collapsed_categories: set[int] = set()
+        self._collapsed_categories: set[int] | None = None  # None = first load, collapse all
 
     def compose(self):
         tree = FeedTree("Feeds", id="feed-tree")
@@ -207,7 +207,7 @@ class FeedListPanel(Widget, can_focus=False, can_focus_children=True):
                 ))
             if unread_total > 0:
                 cat_node.label = f"{cat['name']} ({unread_total})"
-            if cat["id"] not in self._collapsed_categories:
+            if self._collapsed_categories is not None and cat["id"] not in self._collapsed_categories:
                 cat_node.expand()
 
         # Uncategorized feeds (not in any category)

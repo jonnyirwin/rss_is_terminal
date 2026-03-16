@@ -238,7 +238,7 @@ class Database:
 
         where = "WHERE " + " AND ".join(conditions) if conditions else ""
         sql = f"""
-            SELECT a.*, f.title as feed_title
+            SELECT DISTINCT a.*, f.title as feed_title
             FROM articles a
             JOIN feeds f ON a.feed_id = f.id
             {extra_joins}

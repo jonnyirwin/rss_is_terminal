@@ -329,6 +329,23 @@ async def test_get_articles_by_category(db, sample_articles):
 
 
 @pytest.mark.asyncio
+async def test_get_articles_by_category_no_duplicates(db, sample_articles):
+    """A feed in multiple categories should not produce duplicate articles."""
+    cat1 = await db.add_category("Tech")
+    cat2 = await db.add_category("News")
+    feed_id = await db.add_feed(
+        url="https://example.com/feed", title="Test", category_ids=[cat1, cat2]
+    )
+    await db.upsert_articles(feed_id, sample_articles)
+
+    articles = await db.get_articles(category_id=cat1)
+    assert len(articles) == 3
+
+    articles = await db.get_articles(category_id=cat2)
+    assert len(articles) == 3
+
+
+@pytest.mark.asyncio
 async def test_get_articles_limit_offset(db, sample_articles):
     feed_id = await db.add_feed(url="https://example.com/feed", title="Test")
     await db.upsert_articles(feed_id, sample_articles)
@@ -467,6 +484,37 @@ async def test_delete_feed_cascades_articles(db, sample_articles):
 
     articles = await db.get_articles(feed_id)
     assert len(articles) == 0
+
+
+@pytest.mark.asyncio
+async def test_mark_all_feeds_read(db, sample_articles):
+    feed1 = await db.add_feed(url="https://a.com/feed", title="A")
+    feed2 = await db.add_feed(url="https://b.com/feed", title="B")
+    await db.upsert_articles(feed1, sample_articles[:2])
+    await db.upsert_articles(feed2, sample_articles[2:])
+
+    await db.mark_all_feeds_read()
+
+    assert await db.get_unread_count(feed1) == 0
+    assert await db.get_unread_count(feed2) == 0
+    assert await db.get_total_unread_count() == 0
+
+
+@pytest.mark.asyncio
+async def test_mark_category_read(db, sample_articles):
+    cat_id = await db.add_category("Tech")
+    other_cat = await db.add_category("Other")
+    feed1 = await db.add_feed(url="https://a.com/feed", title="A", category_ids=[cat_id])
+    feed2 = await db.add_feed(url="https://b.com/feed", title="B", category_ids=[other_cat])
+    await db.upsert_articles(feed1, sample_articles[:2])
+    await db.upsert_articles(feed2, sample_articles[2:])
+
+    await db.mark_category_read(cat_id)
+
+    # Feed in the target category should be fully read
+    assert await db.get_unread_count(feed1) == 0
+    # Feed in the other category should be unaffected
+    assert await db.get_unread_count(feed2) == 1
 
 
 @pytest.mark.asyncio

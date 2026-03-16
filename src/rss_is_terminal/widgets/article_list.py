@@ -64,6 +64,7 @@ class ArticleListPanel(Widget, can_focus=False, can_focus_children=True):
         Binding("s", "toggle_star", "Toggle Star", show=False),
         Binding("o", "open_browser", "Open Browser", show=False),
         Binding("A", "mark_all_read", "Mark All Read", show=False),
+        Binding("m", "load_more", "Load More", show=False),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -73,6 +74,12 @@ class ArticleListPanel(Widget, can_focus=False, can_focus_children=True):
         self._current_feed_id: int | None = None
         self._filter_mode: str = "all"  # "all", "unread", "starred"
         self._status_column_key = None
+        # Pagination state
+        self._db = None
+        self._query_params: dict = {}
+        self._offset: int = 0
+        self._page_size: int = 200
+        self._has_more: bool = False
 
     def compose(self):
         table = ArticleTable(id="article-table", cursor_type="row")
@@ -93,6 +100,15 @@ class ArticleListPanel(Widget, can_focus=False, can_focus_children=True):
         search: str | None = None,
     ) -> None:
         self._current_feed_id = feed_id
+        self._db = db
+        self._query_params = dict(
+            category_id=category_id,
+            unread_only=unread_only,
+            starred_only=starred_only,
+            search=search,
+        )
+        self._offset = 0
+
         table = self.table
         table.clear(columns=True)
         self._articles.clear()
@@ -101,26 +117,34 @@ class ArticleListPanel(Widget, can_focus=False, can_focus_children=True):
         self._status_column_key = col_keys[0]
         self._row_order.clear()
 
-        articles = await db.get_articles(
-            feed_id,
-            category_id=category_id,
-            unread_only=unread_only,
-            starred_only=starred_only,
-            search=search,
-        )
+        await self._fetch_page()
 
+    async def _fetch_page(self) -> None:
+        articles = await self._db.get_articles(
+            self._current_feed_id,
+            **self._query_params,
+            limit=self._page_size,
+            offset=self._offset,
+        )
+        self._has_more = len(articles) >= self._page_size
+        self._offset += len(articles)
+        self._append_rows(articles)
+
+    def _append_rows(self, articles) -> None:
+        table = self.table
         for article in articles:
+            row_key = str(article["id"])
+            if row_key in self._articles:
+                continue
             status = self._status_icon(article["is_read"], article["is_starred"])
             date_str = self._format_date(article["published_at"])
             title = article["title"] or "(no title)"
-            # Truncate long titles
             if len(title) > 80:
                 title = title[:77] + "..."
             feed_title = article["feed_title"] or ""
             if len(feed_title) > 20:
                 feed_title = feed_title[:17] + "..."
 
-            row_key = str(article["id"])
             table.add_row(status, title, date_str, feed_title, key=row_key)
             self._row_order.append(row_key)
             self._articles[row_key] = ArticleRow(
@@ -189,6 +213,13 @@ class ArticleListPanel(Widget, can_focus=False, can_focus_children=True):
     def action_mark_all_read(self) -> None:
         if self._current_feed_id is not None:
             self.post_message(self.MarkAllRead(self._current_feed_id))
+
+    async def action_load_more(self) -> None:
+        if not self._has_more or not self._db:
+            self.app.notify("No more articles to load")
+            return
+        await self._fetch_page()
+        self.app.notify(f"Loaded more articles ({len(self._articles)} total)")
 
     def update_article_status(self, article_id: int, is_read: bool, is_starred: bool) -> None:
         for key, article in self._articles.items():

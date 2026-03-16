@@ -5,7 +5,37 @@ from unittest.mock import patch
 
 import pytest
 
-from rss_is_terminal.config import AppConfig
+from rss_is_terminal.config import AppConfig, config_dir, data_dir, db_path, config_path
+
+
+class TestPaths:
+    def test_config_dir_creates_directory(self, tmp_path):
+        fake_dir = tmp_path / "config" / "rss_is_terminal"
+        with patch("rss_is_terminal.config.user_config_dir", return_value=str(fake_dir)):
+            result = config_dir()
+            assert result.is_dir()
+            assert result == fake_dir
+
+    def test_data_dir_creates_directory(self, tmp_path):
+        fake_dir = tmp_path / "data" / "rss_is_terminal"
+        with patch("rss_is_terminal.config.user_data_dir", return_value=str(fake_dir)):
+            result = data_dir()
+            assert result.is_dir()
+            assert result == fake_dir
+
+    def test_db_path_returns_rss_db(self, tmp_path):
+        fake_dir = tmp_path / "data"
+        with patch("rss_is_terminal.config.user_data_dir", return_value=str(fake_dir)):
+            result = db_path()
+            assert result.name == "rss.db"
+            assert result.parent == fake_dir
+
+    def test_config_path_returns_toml(self, tmp_path):
+        fake_dir = tmp_path / "config"
+        with patch("rss_is_terminal.config.user_config_dir", return_value=str(fake_dir)):
+            result = config_path()
+            assert result.name == "config.toml"
+            assert result.parent == fake_dir
 
 
 class TestAppConfig:

@@ -677,7 +677,9 @@ class RSSApp(App):
             articles_panel.update_article_status(
                 msg.article_id, new_read, bool(article["is_starred"])
             )
-            await self._reload_feeds()
+            # Only reload the feed tree (for unread counts), not the article list
+            feed_panel = self.query_one("#feeds-panel", FeedListPanel)
+            await feed_panel.load_feeds(self.db)
             await self._update_unread_title()
 
     async def on_article_list_panel_article_toggle_star(self, msg: ArticleListPanel.ArticleToggleStar) -> None:
@@ -894,26 +896,40 @@ class RSSApp(App):
         except Exception as e:
             self.notify(f"Error: {e}", severity="error")
 
+    def _get_feed_name(self) -> str:
+        """Extract the base feed name from the articles panel border title."""
+        title = self.query_one("#articles-panel", ArticleListPanel).border_title or ""
+        # Strip "Articles - " prefix
+        if " - " in title:
+            name = title.split(" - ", 1)[1]
+        else:
+            return "All"
+        # Strip any existing filter suffix
+        for suffix in (" (unread)", " (starred)"):
+            if name.endswith(suffix):
+                name = name[:-len(suffix)]
+        return name
+
     async def action_filter_unread(self) -> None:
         self._filter_mode = "unread" if self._filter_mode != "unread" else "all"
         articles_panel = self.query_one("#articles-panel", ArticleListPanel)
+        feed_name = self._get_feed_name()
         suffix = " (unread)" if self._filter_mode == "unread" else ""
         await articles_panel.load_articles(
             self.db, self._current_feed_id,
             unread_only=self._filter_mode == "unread",
         )
-        feed_name = articles_panel.border_title.split(" - ")[1] if " - " in (articles_panel.border_title or "") else "All"
         articles_panel.border_title = f"Articles - {feed_name}{suffix}"
 
     async def action_filter_starred(self) -> None:
         self._filter_mode = "starred" if self._filter_mode != "starred" else "all"
         articles_panel = self.query_one("#articles-panel", ArticleListPanel)
+        feed_name = self._get_feed_name()
         suffix = " (starred)" if self._filter_mode == "starred" else ""
         await articles_panel.load_articles(
             self.db, self._current_feed_id,
             starred_only=self._filter_mode == "starred",
         )
-        feed_name = articles_panel.border_title.split(" - ")[1] if " - " in (articles_panel.border_title or "") else "All"
         articles_panel.border_title = f"Articles - {feed_name}{suffix}"
 
     # -- Helpers --

@@ -193,6 +193,134 @@ class TestDeleteFeed:
         assert feed is None
 
 
+class TestRefreshScraperFeed:
+    @pytest.mark.asyncio
+    async def test_refresh_scraper_feed(self, service, tmp_path):
+        """Test the two-phase scraper refresh: listing + content backfill."""
+        import json
+
+        config_data = {
+            "name": "Test Blog",
+            "url": "https://example.com/blog",
+            "article_selector": "div.post",
+            "fields": {
+                "title": "h2",
+                "url": "a @href",
+            },
+        }
+        config_file = tmp_path / "scraper.json"
+        config_file.write_text(json.dumps(config_data))
+
+        feed_id = await service.db.add_feed(
+            url="https://example.com/blog",
+            title="Test Blog",
+            feed_type="scraper",
+            scraper_config_path=str(config_file),
+        )
+
+        # Mock the scraper to return entries
+        service.scraper.scrape = AsyncMock(return_value=[
+            EntryData(guid="1", title="Post 1", url="https://example.com/1", summary="Short"),
+        ])
+        service.scraper.fetch_full_content = AsyncMock()
+
+        error = await service.refresh_feed(feed_id)
+        assert error is None
+
+        articles = await service.db.get_articles(feed_id)
+        assert len(articles) == 1
+        assert articles[0]["title"] == "Post 1"
+
+    @pytest.mark.asyncio
+    async def test_refresh_scraper_no_scraper(self, db):
+        """Refresh should fail gracefully when scraper is unavailable."""
+        fetcher = MagicMock(spec=FeedFetcher)
+        svc = FeedService(db, fetcher, scraper=None)
+
+        feed_id = await db.add_feed(
+            url="https://example.com/blog",
+            title="Test",
+            feed_type="scraper",
+            scraper_config_path="/tmp/fake.json",
+        )
+
+        error = await svc.refresh_feed(feed_id)
+        assert error == "Scraper not available"
+
+    @pytest.mark.asyncio
+    async def test_refresh_scraper_no_config_path(self, service):
+        """Refresh should fail if the feed has no scraper config path."""
+        feed_id = await service.db.add_feed(
+            url="https://example.com/blog",
+            title="Test",
+            feed_type="scraper",
+        )
+
+        error = await service.refresh_feed(feed_id)
+        assert error == "No scraper config path"
+
+    @pytest.mark.asyncio
+    async def test_refresh_scraper_scrape_error(self, service, tmp_path):
+        """Refresh should handle scrape failures gracefully."""
+        import json
+
+        config_data = {
+            "name": "Test",
+            "url": "https://example.com",
+            "article_selector": "div",
+            "fields": {"title": "h2"},
+        }
+        config_file = tmp_path / "scraper.json"
+        config_file.write_text(json.dumps(config_data))
+
+        feed_id = await service.db.add_feed(
+            url="https://example.com",
+            title="Test",
+            feed_type="scraper",
+            scraper_config_path=str(config_file),
+        )
+
+        service.scraper.scrape = AsyncMock(side_effect=RuntimeError("Network error"))
+
+        error = await service.refresh_feed(feed_id)
+        assert "Network error" in error
+
+        feed = await service.db.get_feed(feed_id)
+        assert "Network error" in feed["fetch_error"]
+
+    @pytest.mark.asyncio
+    async def test_refresh_scraper_content_backfill_failure_non_fatal(self, service, tmp_path):
+        """Content backfill failure should not prevent the refresh from succeeding."""
+        import json
+
+        config_data = {
+            "name": "Test",
+            "url": "https://example.com",
+            "article_selector": "div",
+            "fields": {"title": "h2"},
+        }
+        config_file = tmp_path / "scraper.json"
+        config_file.write_text(json.dumps(config_data))
+
+        feed_id = await service.db.add_feed(
+            url="https://example.com",
+            title="Test",
+            feed_type="scraper",
+            scraper_config_path=str(config_file),
+        )
+
+        service.scraper.scrape = AsyncMock(return_value=[
+            EntryData(guid="1", title="Post", url="https://example.com/1", summary="Short"),
+        ])
+        service.scraper.fetch_full_content = AsyncMock(side_effect=RuntimeError("Timeout"))
+
+        error = await service.refresh_feed(feed_id)
+        assert error is None  # Content backfill failure is non-fatal
+
+        articles = await service.db.get_articles(feed_id)
+        assert len(articles) == 1
+
+
 class TestAddScraperFeed:
     @pytest.mark.asyncio
     async def test_no_scraper_available(self, db):
